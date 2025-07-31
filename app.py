@@ -1,7 +1,9 @@
+
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 import ta
+from yahooquery import search
 
 st.set_page_config(page_title="Stock Visualizer", layout="wide")
 
@@ -51,10 +53,27 @@ body, .stApp {
 </style>
 """, unsafe_allow_html=True)
 
-# --- Sidebar for Symbol Search and Info ---
+# --- Sidebar for Symbol/Name Search and Info ---
 with st.sidebar:
     st.markdown("<h2 style='font-weight:700; margin-bottom:0.5em;'>Stock Visualizer</h2>", unsafe_allow_html=True)
-    stock = st.text_input("Stock Symbol", "AAPL", help="Type a valid stock ticker (e.g., AAPL, MSFT, TSLA)")
+    search_mode = st.radio("Search by", ["Symbol", "Name"], horizontal=True)
+    stock = "AAPL"
+    if search_mode == "Symbol":
+        stock = st.text_input("Stock Symbol", stock, help="Type a valid stock ticker (e.g., AAPL, MSFT, TSLA)")
+    else:
+        name_query = st.text_input("Company Name", "Apple", help="Type a company name (e.g., Apple, Microsoft, Tesla)")
+        suggestions = []
+        if name_query:
+            try:
+                results = search(name_query)
+                if 'quotes' in results:
+                    suggestions = [f"{item['shortname']} ({item['symbol']})" for item in results['quotes'] if 'shortname' in item and 'symbol' in item]
+            except Exception:
+                suggestions = []
+        selected = st.selectbox("Select Company", suggestions, index=0 if suggestions else None)
+        if selected:
+            # Extract symbol from "Name (SYMBOL)"
+            stock = selected.split('(')[-1].replace(')','').strip()
     st.markdown("<hr style='margin:1em 0;'>", unsafe_allow_html=True)
     st.markdown("""
     <div style='font-size:0.95rem; color:#666;'>
@@ -63,6 +82,7 @@ with st.sidebar:
     • OHLCV charts<br>
     • Moving averages<br>
     • RSI & MACD<br>
+    • Search by symbol or company name<br>
     </div>
     """, unsafe_allow_html=True)
 
